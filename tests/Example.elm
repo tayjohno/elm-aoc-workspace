@@ -42,7 +42,7 @@ suite : Test
 suite =
     describe "Advent of Code"
         [ describe "Day01"
-            [ test_answer "partOne" "" Day01.partOne
-            , test_answer "partTwo" "" Day01.partTwo
+            [ test_answer "partOne" "ANSWERGOESHERE" Day01.partOne
+            , test_answer "partTwo" "ANSWERGOESHERE" Day01.partTwo
             ]
         ]
