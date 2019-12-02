@@ -1,0 +1,256 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Answers</title>
+  <script src="elm.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #F44336;
+    }
+
+    .day-wrapper {
+      background-color: #eeeeee;
+      color: rgb(34, 34, 34);
+      margin: 20px 10px;
+      padding: 12px 1.5em 18px;
+      position: relative;
+      flex-grow: 1;
+      box-shadow: 0 2px 10px 2px rgba(0, 0, 0, .25);
+    }
+
+    .day-wrapper.debug {
+      width: 100%;
+    }
+
+    .day-wrapper.pending {
+      filter: opacity(0.5);
+    }
+
+    .flex-spacer {
+      flex-grow: 999;
+      width: 200px;
+    }
+
+    .heading-wrapper {
+      position: relative;
+      top: -26px;
+      left: -12px;
+      height: 0;
+    }
+
+    .heading-wrapper h2 {
+      background-color: #4CAF50;
+      color: #eeeeee;
+      z-index: 2;
+      display: inline-block;
+      padding: 2px 22px;
+      border-radius: 20px;
+      margin-right: -23px;
+      box-shadow: 0 2px 10px 2px rgba(0, 0, 0, .25);
+      position: relative;
+      top: -22px;
+      left: -6px;
+    }
+
+    .param {
+      margin-bottom: 0;
+    }
+
+    .param.pending {
+      color: gray;
+    }
+
+    .param.solving {
+      color: #00800052;
+    }
+
+    .param.solved, .param.faked {
+      color: green;
+    }
+
+    .param.faked::after {
+      content: ' *';
+    }
+
+    .param.failed {
+      color: red;
+    }
+
+    .debug .param {
+      display: inline-block;
+      margin: 1em 20px 1em 0;
+    }
+
+    .param-name {
+      font-weight: bold;
+    }
+
+    .param-value {
+      font-family: courier, monospace;
+      border: 1px solid #bbbbbb;
+      padding: 3px 6px 1px;
+      background-color: #ffffff;
+      box-shadow: inset 0px 2px 5px 0px grey;
+    }
+
+    .hidden-debug {
+      width: 100%;
+      display: none;
+      resize: none;
+      height: 200px;
+      font-family: courier, monospace;
+      overflow: auto;
+      white-space: pre;
+    }
+
+    .debug .hidden-debug {
+      display: block;
+    }
+
+    /* Snowflakes from https://codepen.io/iautomation/pen/VYexBz */
+
+
+    html,
+    body {
+
+      filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#1e5799', endColorstr='#7db9e8', GradientType=0);
+      /* IE6-9 */
+      min-height: 100%;
+    }
+
+    .snowflakes {
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      top: -90px;
+      left: 0;
+    }
+
+    i,
+    i:after,
+    i:before {
+      background: white;
+    }
+
+    i {
+      display: inline-block;
+      -webkit-animation: snowflakes 3s linear 2s 20;
+      -moz-animation: snowflakes 3s linear 2s 20;
+      position: relative;
+    }
+
+    i:after,
+    i:before {
+      height: 100%;
+      width: 100%;
+      content: ".";
+      position: absolute;
+      top: 0px;
+      left: 0px;
+      -webkit-transform: rotate(120deg);
+    }
+
+    i:before {
+      -webkit-transform: rotate(240deg);
+    }
+
+    @-webkit-keyframes snowflakes {
+      0% {
+        -webkit-transform: translate3d(0, 0, 0) rotate(0deg) scale(0.6);
+      }
+
+      100% {
+        -webkit-transform: translate3d(15px, 1200px, 0px) rotate(360deg) scale(0.6);
+      }
+
+      ;
+    }
+
+    .snowflakes i:nth-child(3n) {
+      width: 16px;
+      height: 4px;
+      -webkit-animation-duration: 4s;
+      -webkit-animation-iteration-count: 30;
+      -webkit-transform-origin: right -45px;
+    }
+
+    .snowflakes i:nth-child(3n+1) {
+      width: 24px;
+      height: 6px;
+      -webkit-animation-duration: 6s;
+      -webkit-animation-iteration-count: 45;
+      -webkit-transform-origin: right -30px;
+    }
+
+    .snowflakes i:nth-child(3n+2) {
+      width: 32px;
+      height: 8px;
+      -webkit-animation-duration: 8s;
+      -webkit-animation-iteration-count: 60;
+      -webkit-transform-origin: right -15px;
+    }
+
+    /* different delays so they don't all start at the same time */
+    .snowflakes i:nth-child(7n) {
+      opacity: .3;
+      -webkit-animation-delay: 0s;
+      -webkit-animation-timing-function: ease-in;
+    }
+
+    .snowflakes i:nth-child(7n+1) {
+      opacity: .4;
+      -webkit-animation-delay: 1s;
+      -webkit-animation-timing-function: ease-out;
+    }
+
+    .snowflakes i:nth-child(7n+2) {
+      opacity: .5;
+      -webkit-animation-delay: 1.5s;
+      -webkit-animation-timing-function: linear;
+    }
+
+    .snowflakes i:nth-child(7n+3) {
+      opacity: .6;
+      -webkit-animation-delay: 2s;
+      -webkit-animation-timing-function: ease-in;
+    }
+
+    .snowflakes i:nth-child(7n+4) {
+      opacity: .7;
+      -webkit-animation-delay: 2.5s;
+      -webkit-animation-timing-function: linear;
+    }
+
+    .snowflakes i:nth-child(7n+5) {
+      opacity: .8;
+      -webkit-animation-delay: 3s;
+      -webkit-animation-timing-function: ease-out;
+    }
+
+    .snowflakes i:nth-child(7n+6) {
+      opacity: .9;
+      -webkit-animation-delay: 3.5s;
+      -webkit-animation-timing-function: ease-in;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="snowflakes"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+  <div id="elm-f0111bc4e658d0f98db96260c16f7e49"></div>
+
+  <script>
+    var app = Elm.Answers.init({
+      node: document.getElementById('elm-f0111bc4e658d0f98db96260c16f7e49')
+    });
+  </script>
+</body>
+
+</html>
