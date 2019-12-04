@@ -122,23 +122,28 @@ partOne : () -> Answer String
 partOne _ =
     input
         |> findIntersections
+        -- Calculate Manhattan Distances
         |> List.map Tuple.first
         |> List.map (\( x, y ) -> abs x + abs y)
-        |> List.minimum
-        |> Maybe.map String.fromInt
-        |> Maybe.map Solved
-        |> Maybe.withDefault Unsolved
+        -- Get Smallest
+        |> findMinimumAnswer
 
 
 partTwo : () -> Answer String
 partTwo _ =
     input
         |> findIntersections
+        -- Grab Wire Lengths
         |> List.map Tuple.second
-        |> List.minimum
-        |> Maybe.map String.fromInt
-        |> Maybe.map Solved
-        |> Maybe.withDefault Unsolved
+        -- Get Smallest
+        |> findMinimumAnswer
+
+
+findMinimumAnswer : List Int -> Answer String
+findMinimumAnswer =
+    List.minimum
+        >> Maybe.map (String.fromInt >> Solved)
+        >> Maybe.withDefault Unsolved
 
 
 findIntersections : Input -> List ( Coordinate, Int )
@@ -147,6 +152,10 @@ findIntersections ( wire1, wire2 ) =
         |> searchWire wire2 ( 0, 0 ) 0
 
 
+{-| placeWire "Lays down" the first wire, returning a Dictonary of
+Coordinates -> Int, where the Int represents how long the wire spanned to
+reach that point
+-}
 placeWire : List Segment -> Coordinate -> Int -> Dict Coordinate Int -> Dict Coordinate Int
 placeWire listSegment coord distance dict =
     case listSegment of
@@ -168,6 +177,10 @@ placeWire listSegment coord distance dict =
                 (Dict.insert newCoord (distance + 1) dict)
 
 
+{-| searchWire follows the secondWire and returns any points at which the
+two wires intersect, as well as the total distance taken (by both wires)
+to reach that point.
+-}
 searchWire : List Segment -> Coordinate -> Int -> Dict Coordinate Int -> List ( Coordinate, Int )
 searchWire listSegment coord distance dict =
     case listSegment of
