@@ -46,6 +46,7 @@ meet all of the criteria?
 -}
 
 import Answer exposing (Answer(..))
+import Regex exposing (Regex)
 
 
 type alias Input =
@@ -115,8 +116,8 @@ passwordValidator1 password =
         -- These were never necessary, but fun to implement
         -- |> Result.andThen validateLength
         -- |> Result.andThen validateRange
-        |> Result.andThen validatePair
         |> Result.andThen validateIncreasing
+        |> Result.andThen validatePair
 
 
 passwordValidator2 : String -> Result String String
@@ -151,24 +152,21 @@ validateRange password =
 -}
 validatePair : String -> Result String String
 validatePair password =
-    password
-        |> digitPairs
-        |> List.any
-            (\s ->
-                case s |> String.toList of
-                    a :: b :: [] ->
-                        a == b
+    if password |> Regex.contains digitPairRegex then
+        Ok password
 
-                    _ ->
-                        Debug.todo ("Invalid Digit Pair: \"" ++ s ++ "\"")
-            )
-        |> (\valid ->
-                if valid then
-                    Ok password
+    else
+        Err (password ++ " has no matching digit pairs.")
 
-                else
-                    Err (password ++ " has no matching digit pairs.")
-           )
+
+digitPairRegex : Regex
+digitPairRegex =
+    case Regex.fromString "([0-9])\\1" of
+        Just regex ->
+            regex
+
+        _ ->
+            Debug.todo "Invalid Regex"
 
 
 {-| Ensure that there exists some side-by-side pair
@@ -212,39 +210,12 @@ validateExactPairHelper currentChar int charList =
 -}
 validateIncreasing : String -> Result String String
 validateIncreasing password =
-    password
-        |> digitPairs
-        |> List.filterMap
-            (\s ->
-                case s |> String.toList of
-                    a :: b :: [] ->
-                        if a > b then
-                            Just (Err (password ++ " has invalid sequence \"" ++ ([ a, b ] |> String.fromList) ++ "\""))
+    let
+        digits =
+            password |> String.toList
+    in
+    if List.sort digits == digits then
+        Ok password
 
-                        else
-                            Nothing
-
-                    _ ->
-                        Debug.todo ("Invalid Digit Pair: \"" ++ s ++ "\"")
-            )
-        |> List.head
-        |> Maybe.withDefault (Ok password)
-
-
-digitPairs : String -> List String
-digitPairs string =
-    string |> String.toList |> digitPairsHelper
-
-
-digitPairsHelper : List Char -> List String
-digitPairsHelper password =
-    case password of
-        a :: b :: tail ->
-            String.fromList [ a, b ] :: digitPairsHelper (b :: tail)
-
-        _ ->
-            []
-
-
-validateDigits password =
-    String.toList
+    else
+        Err (password ++ " is not sorted.")
