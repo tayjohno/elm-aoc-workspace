@@ -1,4 +1,4 @@
-module Coordinate exposing (Coordinate, down, eightNeighbors, fourNeighbors, left, right, up)
+module Coordinate exposing (Coordinate, distance, down, eightNeighbors, fourNeighbors, heading, left, right, up)
 
 {-| ( x, y )
 -}
@@ -22,6 +22,43 @@ right ( x, y ) =
 
 down ( x, y ) =
     ( x, y + 1 )
+
+
+{-| Returns the direction (in radians) from one coordinate to another.
+
+This will always return a positive value (0-2π)
+
+-}
+heading : Coordinate -> Coordinate -> Float
+heading ( fromX, fromY ) ( toX, toY ) =
+    let
+        dx =
+            toX - fromX |> toFloat
+
+        -- This subtraction is intentionally reversed to ensure that "up" is equal to 0
+        dy =
+            fromY - toY |> toFloat
+
+        dir =
+            atan2 dx dy
+    in
+    if dir < 0 then
+        dir + (2 * pi)
+
+    else
+        dir
+
+
+distance : Coordinate -> Coordinate -> Float
+distance ( fromX, fromY ) ( toX, toY ) =
+    let
+        dx =
+            toX - fromX |> toFloat
+
+        dy =
+            toY - fromY |> toFloat
+    in
+    sqrt (dx ^ 2 + dy ^ 2)
 
 
 fourNeighbors : Coordinate -> List Coordinate

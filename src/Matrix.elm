@@ -112,8 +112,8 @@ toRowsOfWidth width data list =
                 (Array.toList (Array.slice 0 width data) :: list)
 
 
-fromRows : List (List a) -> a -> Matrix a
-fromRows rows default =
+fromRows : a -> List (List a) -> Matrix a
+fromRows default rows =
     let
         size =
             ( rows |> List.map List.length |> List.maximum |> Maybe.withDefault 0
@@ -235,8 +235,12 @@ customPrintHelper function row index matrix =
     let
         ( width, height ) =
             matrix.size
+
+        currentChar =
+            Array.get index matrix.data |> Maybe.map function |> Maybe.withDefault ' ' |> String.fromChar
     in
     if index >= width * height then
+        -- Finished
         Debug.log "" row |> always matrix
 
     else if modBy width index == 0 then
@@ -250,14 +254,14 @@ customPrintHelper function row index matrix =
         in
         customPrintHelper
             function
-            ""
+            currentChar
             (index + 1)
             matrix
 
     else
         customPrintHelper
             function
-            (Array.get index matrix.data |> Maybe.map function |> Maybe.withDefault ' ' |> String.fromChar |> String.append row)
+            (currentChar |> String.append row)
             (index + 1)
             matrix
 
