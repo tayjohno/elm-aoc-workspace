@@ -147,124 +147,28 @@ the answer would be 1202.)
 import Answer exposing (Answer(..))
 import Array exposing (Array)
 import Day02.Input exposing (input)
-
-
-type alias State =
-    { memory : Array Int
-    , pointer : Int
-    }
-
-
-type alias ProgramOutput =
-    Result String Int
-
-
-execute : State -> ProgramOutput
-execute { memory, pointer } =
-    let
-        opCode =
-            Array.get pointer memory
-
-        x =
-            getVar (pointer + 1) memory
-
-        y =
-            getVar (pointer + 2) memory
-
-        output =
-            Array.get (pointer + 3) memory
-    in
-    case opCode of
-        -- add
-        Just 1 ->
-            { memory = memory |> setVar (ensure output) (ensure x + ensure y), pointer = pointer + 4 }
-                |> execute
-
-        -- mult
-        Just 2 ->
-            { memory = memory |> setVar (ensure output) (ensure x * ensure y), pointer = pointer + 4 }
-                |> execute
-
-        -- halt
-        Just 99 ->
-            Array.get 0 memory
-                |> Maybe.map Ok
-                |> Maybe.withDefault (Err "Could not read result")
-
-        Just a ->
-            Err
-                ("Invalid Op Code ("
-                    ++ (a |> String.fromInt)
-                    ++ ") at pointer ("
-                    ++ (pointer |> String.fromInt)
-                    ++ ")"
-                )
-
-        Nothing ->
-            Err
-                ("InstructionPointer out of bounds ("
-                    ++ (pointer |> String.fromInt)
-                    ++ ")"
-                )
-
-
-{-| Gets the variable located at the position in memory specified by the
-pointer stored at the index provided.
-
-For example:
-
-getVar 1
-
-reads the value at index of 1, then gets the var at that location
-
--}
-getVar : Int -> Array Int -> Maybe Int
-getVar pointerIndex memory =
-    Array.get pointerIndex memory
-        |> Maybe.andThen (\i -> Array.get i memory)
-
-
-ensure : Maybe a -> a
-ensure maybeA =
-    case maybeA of
-        Just a ->
-            a
-
-        Nothing ->
-            Debug.todo "Oops! Expected some value."
-
-
-setVar : Int -> Int -> Array Int -> Array Int
-setVar pointer val intArray =
-    if pointer >= Array.length intArray || pointer < 0 then
-        Debug.todo "Attempting to set var out-of-bounds"
-
-    else
-        Array.set pointer val intArray
+import Intcode exposing (..)
 
 
 partOne : () -> Answer String
 partOne _ =
     let
         initialState =
-            { memory = input |> Array.fromList
-            , pointer = 0
-            }
+            init (input |> Array.fromList)
                 |> nounVerb 12 2
     in
     initialState
-        |> execute
-        |> toAnswer
+        |> Intcode.executeProgram
+        |> answerFromAddress0
 
 
-toAnswer : ProgramOutput -> Answer String
-toAnswer output =
-    case output of
-        Err str ->
-            -- TODO: Should really have some error state
-            "ERR: " ++ str |> Solved
+answerFromAddress0 : State -> Answer String
+answerFromAddress0 { memory } =
+    case Array.get 0 memory of
+        Nothing ->
+            Debug.todo "Nothing at address 0?"
 
-        Ok int ->
+        Just int ->
             int |> String.fromInt |> Solved
 
 
@@ -282,23 +186,29 @@ partTwo : () -> Answer String
 partTwo _ =
     let
         initialState =
-            { memory = input |> Array.fromList
-            , pointer = 0
-            }
+            init (input |> Array.fromList)
     in
     initialState
         |> partTwoHelper 0 0
-        |> toAnswer
+        |> String.fromInt
+        |> Solved
 
 
-partTwoHelper : Int -> Int -> State -> ProgramOutput
+partTwoHelper : Int -> Int -> State -> Int
 partTwoHelper noun verb initialState =
     let
         state =
             initialState |> nounVerb noun verb
+
+        correctInput =
+            state
+                |> Intcode.executeProgram
+                |> .memory
+                |> Array.get 0
+                |> (==) (Just 19690720)
     in
-    if execute state == Ok 19690720 then
-        Ok (100 * noun + verb)
+    if correctInput then
+        100 * noun + verb
 
     else if noun == 99 then
         partTwoHelper 0 (verb + 1) initialState
