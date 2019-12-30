@@ -45,10 +45,10 @@ inputOutputTest text program input expectedOutput =
             let
                 finalState =
                     Intcode.init program
-                        |> Intcode.setInput input
+                        |> Intcode.setInputs [ input ]
                         |> Intcode.executeProgram
             in
-            Expect.equal finalState.output [ expectedOutput ]
+            Expect.equal finalState.outputs [ expectedOutput ]
 
 
 printMemory : List Int -> String

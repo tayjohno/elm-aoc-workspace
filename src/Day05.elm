@@ -192,9 +192,9 @@ import List.Extra as List
 partOne : () -> Answer String
 partOne _ =
     Intcode.init input
-        |> Intcode.setInput 1
+        |> Intcode.setInputs [ 1 ]
         |> Intcode.executeProgram
-        |> .output
+        |> .outputs
         |> List.last
         |> Answer.fromMaybeInt
 
@@ -202,8 +202,8 @@ partOne _ =
 partTwo : () -> Answer String
 partTwo _ =
     Intcode.init input
-        |> Intcode.setInput 5
+        |> Intcode.setInputs [ 5 ]
         |> Intcode.executeProgram
-        |> .output
+        |> .outputs
         |> List.last
         |> Answer.fromMaybeInt

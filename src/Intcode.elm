@@ -1,4 +1,4 @@
-module Intcode exposing (State, executeProgram, init, setInput)
+module Intcode exposing (State, Status(..), addInput, executeProgram, init, setInputs)
 
 import Array exposing (Array)
 import List.Extra as List
@@ -12,8 +12,9 @@ type alias Memory =
 type alias State =
     { memory : Array Int
     , pointer : Pointer
-    , input : Int
-    , output : List Int
+    , status : Status
+    , inputs : List Int
+    , outputs : List Int
     }
 
 
@@ -30,25 +31,40 @@ type ParameterMode
     | ImmediateMode
 
 
+type Status
+    = Ready
+    | Halted
+    | AwaitingInput
+
+
 init : List Int -> State
 init program =
     { memory = program |> Array.fromList
-    , input = 0
+    , status = Ready
+    , inputs = []
     , pointer = 0
-    , output = []
+    , outputs = []
     }
 
 
-setInput : Int -> State -> State
-setInput input state =
-    { state | input = input }
+setInputs : List Int -> State -> State
+setInputs inputs state =
+    { state | inputs = inputs, status = Ready }
+
+
+addInput : Int -> State -> State
+addInput newInput state =
+    { state | inputs = state.inputs ++ [ newInput ], status = Ready }
 
 
 executeProgram : State -> State
 executeProgram state =
     case executeInstruction state of
         Err "halt" ->
-            state
+            { state | status = Halted }
+
+        Err "await" ->
+            { state | status = AwaitingInput }
 
         Err a ->
             Debug.todo ("Unexpected error " ++ a)
@@ -273,27 +289,35 @@ value and store it at address 50.
 inputOp : Instruction
 inputOp state =
     let
-        { memory, pointer, input } =
+        { memory, pointer, inputs } =
             state
 
         outputPointerResult =
             Array.get (pointer + 1) memory
                 |> Result.fromMaybe (errorStringWithInt "Parameter out of bounds" (pointer + 1))
+
+        maybeInput =
+            List.head inputs
     in
-    case outputPointerResult of
-        Err a ->
-            Err a
+    outputPointerResult
+        |> Result.andThen
+            (\outputPointer ->
+                if outputPointer >= Array.length memory || outputPointer < 0 then
+                    errorWithInt "Invalid output pointer: Can't write to address" outputPointer
 
-        Ok outputPointer ->
-            if outputPointer >= Array.length memory || outputPointer < 0 then
-                errorWithInt "Invalid output pointer: Can't write to address" outputPointer
+                else
+                    case maybeInput of
+                        Nothing ->
+                            Err "await"
 
-            else
-                Ok
-                    { state
-                        | memory = Array.set outputPointer input memory
-                        , pointer = pointer + 2
-                    }
+                        Just input ->
+                            Ok
+                                { state
+                                    | memory = Array.set outputPointer input memory
+                                    , inputs = inputs |> List.drop 1
+                                    , pointer = pointer + 2
+                                }
+            )
 
 
 {-| opcode: 4
@@ -305,7 +329,7 @@ would output the value at address 50.
 outputOp : Instruction
 outputOp state =
     let
-        { memory, pointer, output } =
+        { memory, pointer, outputs } =
             state
 
         paramTypes =
@@ -322,7 +346,7 @@ outputOp state =
             Ok
                 { state
                     | pointer = pointer + 2
-                    , output = output ++ [ x ]
+                    , outputs = outputs ++ [ x ]
                 }
 
 
