@@ -154,7 +154,7 @@ partOne : () -> Answer String
 partOne _ =
     let
         initialState =
-            init (input |> Array.fromList)
+            init input
                 |> nounVerb 12 2
     in
     initialState
@@ -186,7 +186,7 @@ partTwo : () -> Answer String
 partTwo _ =
     let
         initialState =
-            init (input |> Array.fromList)
+            init input
     in
     initialState
         |> partTwoHelper 0 0

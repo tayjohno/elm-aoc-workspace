@@ -167,7 +167,8 @@ partTwo _ =
     input
         |> layers
         |> List.Extra.foldl1 mergeLayers
-        |> Maybe.map print
+        -- NOTE: To see solution, uncomment the following line
+        -- |> Maybe.map print
         |> always (Solved "ZPZUB")
 
 

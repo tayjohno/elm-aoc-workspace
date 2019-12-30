@@ -1,6 +1,8 @@
-module Intcode exposing (Memory, Pointer, State, executeProgram, init)
+module Intcode exposing (State, executeProgram, init, setInput)
 
 import Array exposing (Array)
+import List.Extra as List
+import Maybe.Extra as Maybe
 
 
 type alias Memory =
@@ -10,6 +12,8 @@ type alias Memory =
 type alias State =
     { memory : Array Int
     , pointer : Pointer
+    , input : Int
+    , output : List Int
     }
 
 
@@ -26,11 +30,18 @@ type ParameterMode
     | ImmediateMode
 
 
-init : Memory -> State
-init memory =
-    { memory = memory
+init : List Int -> State
+init program =
+    { memory = program |> Array.fromList
+    , input = 0
     , pointer = 0
+    , output = []
     }
+
+
+setInput : Int -> State -> State
+setInput input state =
+    { state | input = input }
 
 
 executeProgram : State -> State
@@ -59,20 +70,40 @@ executeInstruction state =
 getInstruction : State -> Result String Instruction
 getInstruction { memory, pointer } =
     case Array.get pointer memory of
-        Just 1 ->
-            Ok add
-
-        Just 2 ->
-            Ok mult
-
-        Just 99 ->
-            Ok halt
-
-        Just a ->
-            errorWithInt "Invalid Op Code: There is no operation with this code" a
-
         Nothing ->
             errorWithInt "Invalid Op Code: Memory out of bounds" pointer
+
+        Just a ->
+            case remainderBy 100 a of
+                1 ->
+                    Ok addOp
+
+                2 ->
+                    Ok multOp
+
+                3 ->
+                    Ok inputOp
+
+                4 ->
+                    Ok outputOp
+
+                5 ->
+                    Ok jumpIfTrueOp
+
+                6 ->
+                    Ok jumpIfFalseOp
+
+                7 ->
+                    Ok lessThanOp
+
+                8 ->
+                    Ok equalsOp
+
+                99 ->
+                    Ok haltOp
+
+                code ->
+                    errorWithInt "Invalid Op Code: There is no operation with this code" code
 
 
 errorOutOfBounds pointer =
@@ -109,39 +140,59 @@ readParam readMode memory pointer =
                     )
 
 
-get2Params : ( ParameterMode, ParameterMode ) -> Memory -> Pointer -> Result String ( Int, Int )
-get2Params ( readMode1, readMode2 ) state =
-    Debug.todo "blah"
+{-| Read out a list of parameter types from the current memory position
+-}
+readParamTypes : Memory -> Pointer -> List ParameterMode
+readParamTypes memory pointer =
+    case memory |> Array.get pointer of
+        Nothing ->
+            Debug.todo <| "Trying to readParamTypes at invalid memory address " ++ String.fromInt pointer
+
+        Just record ->
+            record
+                |> String.fromInt
+                |> String.toList
+                |> List.reverse
+                |> List.drop 2
+                |> List.map
+                    (\i ->
+                        case i of
+                            '0' ->
+                                PositionMode
+
+                            '1' ->
+                                ImmediateMode
+
+                            _ ->
+                                Debug.todo <| "Invalid mode " ++ String.fromChar i
+                    )
 
 
-get3 : State -> Result String ( Int, Int, Int )
-get3 { memory, pointer } =
-    case
-        ( Array.get (pointer + 1) memory
-        , Array.get (pointer + 2) memory
-        , Array.get (pointer + 3) memory
-        )
-    of
-        ( Just x, Just y, Just z ) ->
-            Ok ( x, y, z )
+getParamType : Int -> List ParameterMode -> ParameterMode
+getParamType i =
+    List.getAt i >> Maybe.withDefault PositionMode
 
-        _ ->
-            Err "Memory out of bounds"
+
+
+------ OPERATIONS ------
 
 
 {-| opcode: 1
 -}
-add : Instruction
-add state =
+addOp : Instruction
+addOp state =
     let
         { memory, pointer } =
             state
 
+        paramTypes =
+            readParamTypes memory pointer
+
         xResult =
-            readParam PositionMode memory (pointer + 1)
+            readParam (getParamType 0 paramTypes) memory (pointer + 1)
 
         yResult =
-            readParam PositionMode memory (pointer + 2)
+            readParam (getParamType 1 paramTypes) memory (pointer + 2)
 
         outputPointerResult =
             Array.get (pointer + 3) memory
@@ -163,24 +214,28 @@ add state =
 
             else
                 Ok
-                    { memory = Array.set outputPointer (x + y) memory
-                    , pointer = pointer + 4
+                    { state
+                        | memory = Array.set outputPointer (x + y) memory
+                        , pointer = pointer + 4
                     }
 
 
 {-| opcode: 2
 -}
-mult : Instruction
-mult state =
+multOp : Instruction
+multOp state =
     let
         { memory, pointer } =
             state
 
+        paramTypes =
+            readParamTypes memory pointer
+
         xResult =
-            readParam PositionMode memory (pointer + 1)
+            readParam (getParamType 0 paramTypes) memory (pointer + 1)
 
         yResult =
-            readParam PositionMode memory (pointer + 2)
+            readParam (getParamType 1 paramTypes) memory (pointer + 2)
 
         outputPointerResult =
             Array.get (pointer + 3) memory
@@ -202,22 +257,24 @@ mult state =
 
             else
                 Ok
-                    { memory = Array.set outputPointer (x * y) memory
-                    , pointer = pointer + 4
+                    { state
+                        | memory = Array.set outputPointer (x * y) memory
+                        , pointer = pointer + 4
                     }
 
 
 {-| opcode: 3
--}
-input : Instruction
-input state =
-    let
-        { memory, pointer } =
-            state
 
-        -- For Day05, this is ALWAYS the only input.
-        inputVal =
-            1
+takes a single integer as input and saves it to the position given by its
+only parameter. For example, the instruction 3,50 would take an input
+value and store it at address 50.
+
+-}
+inputOp : Instruction
+inputOp state =
+    let
+        { memory, pointer, input } =
+            state
 
         outputPointerResult =
             Array.get (pointer + 1) memory
@@ -233,33 +290,222 @@ input state =
 
             else
                 Ok
-                    { memory = Array.set outputPointer inputVal memory
-                    , pointer = pointer + 2
+                    { state
+                        | memory = Array.set outputPointer input memory
+                        , pointer = pointer + 2
                     }
 
 
 {-| opcode: 4
+
+outputs the value of its only parameter. For example, the instruction 4,50
+would output the value at address 50.
+
 -}
-output : Instruction
-output state =
+outputOp : Instruction
+outputOp state =
     let
-        { memory, pointer } =
+        { memory, pointer, output } =
             state
 
+        paramTypes =
+            readParamTypes memory pointer
+
         xResult =
-            readParam PositionMode memory (pointer + 1)
+            readParam (getParamType 0 paramTypes) memory (pointer + 1)
     in
     case xResult of
         Err a ->
             Err a
 
         Ok x ->
-            Debug.log "output" x
-                |> always (Ok { memory = memory, pointer = pointer + 2 })
+            Ok
+                { state
+                    | pointer = pointer + 2
+                    , output = output ++ [ x ]
+                }
+
+
+{-| opcode: 5
+
+if the first parameter is non-zero, it sets the instruction pointer to the
+value from the second parameter. Otherwise, it does nothing.
+
+-}
+jumpIfTrueOp : Instruction
+jumpIfTrueOp state =
+    let
+        { memory, pointer } =
+            state
+
+        paramTypes =
+            readParamTypes memory pointer
+
+        xResult =
+            readParam (getParamType 0 paramTypes) memory (pointer + 1)
+
+        yResult =
+            readParam (getParamType 1 paramTypes) memory (pointer + 2)
+    in
+    xResult
+        |> Result.andThen
+            (\x ->
+                if x == 0 then
+                    -- Don't jump
+                    Ok { state | pointer = pointer + 3 }
+
+                else
+                    yResult
+                        |> Result.andThen
+                            (\y ->
+                                -- Jump
+                                Ok { state | pointer = y }
+                            )
+            )
+
+
+{-| opcode: 6
+
+if the first parameter is zero, it sets the instruction pointer to the
+value from the second parameter. Otherwise, it does nothing.
+
+-}
+jumpIfFalseOp : Instruction
+jumpIfFalseOp state =
+    let
+        { memory, pointer } =
+            state
+
+        paramTypes =
+            readParamTypes memory pointer
+
+        xResult =
+            readParam (getParamType 0 paramTypes) memory (pointer + 1)
+
+        yResult =
+            readParam (getParamType 1 paramTypes) memory (pointer + 2)
+    in
+    xResult
+        |> Result.andThen
+            (\x ->
+                if x == 0 then
+                    yResult
+                        |> Result.andThen
+                            (\y ->
+                                -- Jump
+                                Ok { state | pointer = y }
+                            )
+
+                else
+                    -- Don't jump
+                    Ok { state | pointer = pointer + 3 }
+            )
+
+
+{-| opcode: 7
+
+if the first parameter is less than the second parameter, it stores 1 in
+the position given by the third parameter. Otherwise, it stores 0.
+
+-}
+lessThanOp : Instruction
+lessThanOp state =
+    let
+        { memory, pointer } =
+            state
+
+        paramTypes =
+            readParamTypes memory pointer
+
+        xResult =
+            readParam (getParamType 0 paramTypes) memory (pointer + 1)
+
+        yResult =
+            readParam (getParamType 1 paramTypes) memory (pointer + 2)
+
+        outputPointerResult =
+            Array.get (pointer + 3) memory
+                |> Result.fromMaybe (errorStringWithInt "Parameter out of bounds" (pointer + 3))
+    in
+    case ( xResult, yResult, outputPointerResult ) of
+        ( Err a, _, _ ) ->
+            Err a
+
+        ( _, Err a, _ ) ->
+            Err a
+
+        ( _, _, Err a ) ->
+            Err a
+
+        ( Ok x, Ok y, Ok outputPointer ) ->
+            let
+                output =
+                    if x < y then
+                        1
+
+                    else
+                        0
+            in
+            Ok
+                { state
+                    | memory = memory |> Array.set outputPointer output
+                    , pointer = pointer + 4
+                }
+
+
+{-| opcode: 8
+
+if the first parameter is equal to the second parameter, it stores 1 in
+the position given by the third parameter. Otherwise, it stores 0.
+
+-}
+equalsOp : Instruction
+equalsOp state =
+    let
+        { memory, pointer } =
+            state
+
+        paramTypes =
+            readParamTypes memory pointer
+
+        xResult =
+            readParam (getParamType 0 paramTypes) memory (pointer + 1)
+
+        yResult =
+            readParam (getParamType 1 paramTypes) memory (pointer + 2)
+
+        outputPointerResult =
+            Array.get (pointer + 3) memory
+                |> Result.fromMaybe (errorStringWithInt "Parameter out of bounds" (pointer + 3))
+    in
+    case ( xResult, yResult, outputPointerResult ) of
+        ( Err a, _, _ ) ->
+            Err a
+
+        ( _, Err a, _ ) ->
+            Err a
+
+        ( _, _, Err a ) ->
+            Err a
+
+        ( Ok x, Ok y, Ok outputPointer ) ->
+            let
+                output =
+                    if x == y then
+                        1
+
+                    else
+                        0
+            in
+            Ok
+                { state
+                    | memory = memory |> Array.set outputPointer output
+                    , pointer = pointer + 4
+                }
 
 
 {-| opcode: 99
 -}
-halt : Instruction
-halt _ =
+haltOp : Instruction
+haltOp _ =
     Err "halt"
