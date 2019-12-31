@@ -91,4 +91,9 @@ partOne _ =
 
 partTwo : () -> Answer String
 partTwo _ =
-    Unsolved
+    Intcode.init input
+        |> Intcode.setInputs [ 2 ]
+        |> Intcode.executeProgram
+        |> .outputs
+        |> List.head
+        |> Answer.fromMaybeInt

@@ -149,22 +149,43 @@ errorStringWithInt msg pointer =
 
 
 readParam : ParameterMode -> State -> ( Int, State )
-readParam readMode state0 =
+readParam paramMode state0 =
     let
         ( rawParamValue, state1 ) =
             readVariableAndIncrement state0
     in
-    case readMode of
+    case paramMode of
         ImmediateMode ->
             ( rawParamValue, state1 )
 
         PositionMode ->
-            ( Memory.read rawParamValue state1.memory
+            ( state1.memory |> Memory.read rawParamValue
             , state1
             )
 
         RelativeMode ->
-            ( state1.memory |> Memory.read (state1.offset + rawParamValue)
+            ( state1.memory |> Memory.read (rawParamValue + state1.offset)
+            , state1
+            )
+
+
+getOutputPointer : ParameterMode -> State -> ( Int, State )
+getOutputPointer paramMode state0 =
+    let
+        ( rawParamValue, state1 ) =
+            readVariableAndIncrement state0
+    in
+    case paramMode of
+        ImmediateMode ->
+            Debug.todo "cannout output in ImmediateMode"
+
+        PositionMode ->
+            ( rawParamValue
+            , state1
+            )
+
+        RelativeMode ->
+            ( rawParamValue + state1.offset
             , state1
             )
 
@@ -229,7 +250,7 @@ addOp state0 =
             readParam (getParamType 1 paramTypes) state2
 
         ( outputPointer, state4 ) =
-            readVariableAndIncrement state3
+            getOutputPointer (getParamType 2 paramTypes) state3
     in
     Ok
         { state4
@@ -253,7 +274,7 @@ multOp state0 =
             readParam (getParamType 1 paramTypes) state2
 
         ( outputPointer, state4 ) =
-            readVariableAndIncrement state3
+            getOutputPointer (getParamType 2 paramTypes) state3
     in
     Ok
         { state4
@@ -272,11 +293,11 @@ value and store it at address 50.
 inputOp : Instruction
 inputOp state0 =
     let
-        ( _, state1 ) =
+        ( paramTypes, state1 ) =
             readParamTypes state0
 
         ( outputPointer, state2 ) =
-            readVariableAndIncrement state1
+            getOutputPointer (getParamType 0 paramTypes) state1
 
         maybeInput =
             List.head state2.inputs
@@ -390,7 +411,7 @@ lessThanOp state0 =
             readParam (getParamType 1 paramTypes) state2
 
         ( outputPointer, state4 ) =
-            readVariableAndIncrement state3
+            getOutputPointer (getParamType 2 paramTypes) state3
 
         output =
             (x < y) |> Int.fromBool
@@ -422,7 +443,7 @@ equalsOp state0 =
             readParam (getParamType 1 paramTypes) state2
 
         ( outputPointer, state4 ) =
-            readVariableAndIncrement state3
+            getOutputPointer (getParamType 2 paramTypes) state3
 
         output =
             (x == y) |> Int.fromBool
