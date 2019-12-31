@@ -3,6 +3,7 @@ module IntcodeTests exposing (suite)
 import Array
 import Expect
 import Intcode
+import Intcode.Memory as Memory
 import String.Extra as String
 import String.Interpolate as String
 import Test exposing (Test, describe, test)
@@ -25,7 +26,7 @@ simpleExecutionTest text program expectation =
                     Intcode.init program
                         |> Intcode.executeProgram
                         |> .memory
-                        |> Array.toList
+                        |> Memory.toList
             in
             Expect.equal finalMemory expectation
 
@@ -171,6 +172,9 @@ suite =
                 , outputListTest "pt 3: \"should output the large number in the middle\""
                     [ 104, 1125899906842624, 99 ]
                     [ 1125899906842624 ]
+                , outputListTest "pt 4: \"read/write outside bounds\""
+                    [ 1101, 2, 3, 100, 4, 100, 99 ]
+                    [ 5 ]
                 ]
             ]
         ]

@@ -75,11 +75,18 @@ produce?
 -}
 
 import Answer exposing (Answer(..))
+import Day09.Input exposing (input)
+import Intcode
 
 
 partOne : () -> Answer String
 partOne _ =
-    Unsolved
+    Intcode.init input
+        |> Intcode.setInputs [ 1 ]
+        |> Intcode.executeProgram
+        |> .outputs
+        |> List.head
+        |> Answer.fromMaybeInt
 
 
 partTwo : () -> Answer String

@@ -148,6 +148,7 @@ import Answer exposing (Answer(..))
 import Array exposing (Array)
 import Day02.Input exposing (input)
 import Intcode exposing (..)
+import Intcode.Memory as Memory
 
 
 partOne : () -> Answer String
@@ -164,12 +165,9 @@ partOne _ =
 
 answerFromAddress0 : State -> Answer String
 answerFromAddress0 { memory } =
-    case Array.get 0 memory of
-        Nothing ->
-            Debug.todo "Nothing at address 0?"
-
-        Just int ->
-            int |> String.fromInt |> Solved
+    Memory.read 0 memory
+        |> String.fromInt
+        |> Solved
 
 
 nounVerb : Int -> Int -> State -> State
@@ -177,8 +175,8 @@ nounVerb noun verb state =
     { state
         | memory =
             state.memory
-                |> Array.set 1 noun
-                |> Array.set 2 verb
+                |> Memory.write 1 noun
+                |> Memory.write 2 verb
     }
 
 
@@ -204,8 +202,8 @@ partTwoHelper noun verb initialState =
             state
                 |> Intcode.executeProgram
                 |> .memory
-                |> Array.get 0
-                |> (==) (Just 19690720)
+                |> Memory.read 0
+                |> (==) 19690720
     in
     if correctInput then
         100 * noun + verb

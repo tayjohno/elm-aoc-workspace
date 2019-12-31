@@ -1,0 +1,28 @@
+module Intcode.Memory exposing (Memory)
+
+
+type Memory =
+    Memory (Array Int)
+
+read : Int -> Memory -> Int
+read int (Memory mem) =
+    if int < 0 then
+        Debug.todo "Accessing memory out of bounds"
+
+    else
+      Array.get int mem |> Maybe.withDefault 0
+
+
+write : Int -> Memory -> Memory
+write int (Memory mem) =
+    if int < 0 then
+        Debug.todo "Accessing memory out of bounds"
+
+    else if outputPointer >= Array.length memory then
+        let
+            resizedMemory =
+                Array.resizelRepeat (outputPointer + 1) 0 mem
+        in
+        Array.set outputPointer (x * y) resizedMemory
+    else
+      Array.set outputPointer (x * y) mem
