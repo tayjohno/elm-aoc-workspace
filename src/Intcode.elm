@@ -15,6 +15,7 @@ type alias State =
     , status : Status
     , inputs : List Int
     , outputs : List Int
+    , offset : Int
     }
 
 
@@ -29,6 +30,7 @@ type alias Instruction =
 type ParameterMode
     = PositionMode
     | ImmediateMode
+    | RelativeMode
 
 
 type Status
@@ -44,6 +46,7 @@ init program =
     , inputs = []
     , pointer = 0
     , outputs = []
+    , offset = 0
     }
 
 
@@ -115,6 +118,9 @@ getInstruction { memory, pointer } =
                 8 ->
                     Ok equalsOp
 
+                9 ->
+                    Ok adjustRelativeBaseOp
+
                 99 ->
                     Ok haltOp
 
@@ -141,19 +147,22 @@ errorStringWithInt msg pointer =
 
 readParam : ParameterMode -> Memory -> Pointer -> Result String Int
 readParam readMode memory pointer =
+    let
+        rawParamValue =
+            Array.get pointer memory
+                |> Result.fromMaybe (errorStringWithInt "Parameter is out of bounds" pointer)
+    in
     case readMode of
         ImmediateMode ->
-            Array.get pointer memory
-                |> Result.fromMaybe (errorStringWithInt "Parameter is out of bounds" pointer)
+            rawParamValue
 
         PositionMode ->
-            Array.get pointer memory
-                |> Result.fromMaybe (errorStringWithInt "Parameter is out of bounds" pointer)
-                |> Result.andThen
-                    (\p ->
-                        Array.get p memory
-                            |> Result.fromMaybe (errorStringWithInt "PositionMode parameter points out of bounds" p)
-                    )
+            rawParamValue
+                |> Result.map
+                    (\p -> Array.get p memory |> Maybe.withDefault 0)
+
+        RelativeMode ->
+            Debug.todo "oops"
 
 
 {-| Read out a list of parameter types from the current memory position
@@ -178,6 +187,9 @@ readParamTypes memory pointer =
 
                             '1' ->
                                 ImmediateMode
+
+                            '2' ->
+                                RelativeMode
 
                             _ ->
                                 Debug.todo <| "Invalid mode " ++ String.fromChar i
@@ -526,6 +538,36 @@ equalsOp state =
                     | memory = memory |> Array.set outputPointer output
                     , pointer = pointer + 4
                 }
+
+
+{-| opcode: 9
+
+adjusts the relative base by the value of its only parameter. The relative
+base increases (or decreases, if the value is negative) by the value of
+the parameter.
+
+-}
+adjustRelativeBaseOp : Instruction
+adjustRelativeBaseOp state =
+    let
+        { memory, pointer, offset } =
+            state
+
+        paramTypes =
+            readParamTypes memory pointer
+
+        xResult =
+            readParam (getParamType 0 paramTypes) memory (pointer + 1)
+    in
+    xResult
+        |> Result.andThen
+            (\x ->
+                Ok
+                    { state
+                        | pointer = pointer + 2
+                        , offset = offset + x
+                    }
+            )
 
 
 {-| opcode: 99
