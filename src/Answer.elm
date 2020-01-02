@@ -1,4 +1,4 @@
-module Answer exposing (Answer(..), fromMaybe, fromMaybeInt)
+module Answer exposing (Answer(..), fromInt, fromMaybe, fromMaybeInt)
 
 
 type Answer a
@@ -21,3 +21,8 @@ fromMaybeInt : Maybe Int -> Answer String
 fromMaybeInt =
     Maybe.map String.fromInt
         >> fromMaybe
+
+
+fromInt : Int -> Answer String
+fromInt =
+    String.fromInt >> Solved

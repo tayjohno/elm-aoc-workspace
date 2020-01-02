@@ -85,4 +85,8 @@ suite =
             [ test_answer "partOne" "2016" Day11.partOne
             , test_answer "partTwo" "RAPRCBPH" Day11.partTwo
             ]
+        , describe "Day12"
+            [ test_answer "partOne" "10664" Day12.partOne
+            , test_answer "partTwo" "" Day12.partTwo
+            ]
         ]
