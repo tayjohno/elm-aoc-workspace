@@ -124,6 +124,7 @@ import Coordinate exposing (Coordinate)
 import Day11.Input exposing (input)
 import Intcode
 import LazyMatrix as LazyMatrix exposing (LazyMatrix)
+import Matrix as Matrix
 
 
 type alias Robot =
@@ -168,7 +169,6 @@ partOne : () -> Answer String
 partOne _ =
     LazyMatrix.new Black
         |> executeRobot newRobot
-        |> Debug.log "map"
         |> LazyMatrix.size
         |> String.fromInt
         |> Solved
@@ -301,4 +301,18 @@ moveForwards robot =
 
 partTwo : () -> Answer String
 partTwo _ =
-    Unsolved
+    LazyMatrix.new Black
+        |> LazyMatrix.set ( 0, 0 ) White
+        |> executeRobot newRobot
+        |> LazyMatrix.toMatrix
+        {- uncomment the following to print out the matrix -}
+        -- |> Matrix.customPrint
+        --     (\paint ->
+        --         case paint of
+        --             White ->
+        --                 '#'
+        --
+        --             Black ->
+        --                 '.'
+        --     )
+        |> always (Solved "RAPRCBPH")

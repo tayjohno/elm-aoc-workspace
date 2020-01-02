@@ -1,4 +1,4 @@
-module LazyMatrix exposing (LazyMatrix, get, new, set, size)
+module LazyMatrix exposing (LazyMatrix, get, new, set, size, toMatrix)
 
 {- LazyMatrix uses a dictionary behind the scenes and assumes that all
    values are still default until
@@ -6,12 +6,50 @@ module LazyMatrix exposing (LazyMatrix, get, new, set, size)
 
 import Coordinate exposing (Coordinate)
 import Dict exposing (Dict)
+import Matrix exposing (Matrix)
 
 
 type alias LazyMatrix a =
     { data : Dict Coordinate a
     , default : a
     }
+
+
+toMatrix : LazyMatrix a -> Matrix a
+toMatrix aLazyMatrix =
+    let
+        xMin =
+            aLazyMatrix.data
+                |> Dict.keys
+                |> List.map Tuple.first
+                |> List.minimum
+                |> Maybe.withDefault 0
+
+        xMax =
+            aLazyMatrix.data
+                |> Dict.keys
+                |> List.map Tuple.first
+                |> List.maximum
+                |> Maybe.withDefault 0
+
+        yMin =
+            aLazyMatrix.data
+                |> Dict.keys
+                |> List.map Tuple.second
+                |> List.minimum
+                |> Maybe.withDefault 0
+
+        yMax =
+            aLazyMatrix.data
+                |> Dict.keys
+                |> List.map Tuple.second
+                |> List.maximum
+                |> Maybe.withDefault 0
+    in
+    Dict.foldl
+        (\key val matrix -> Matrix.set key val matrix)
+        (Matrix.empty ( xMax - xMin + 1, yMax - yMin + 1 ) aLazyMatrix.default)
+        aLazyMatrix.data
 
 
 new : a -> LazyMatrix a
