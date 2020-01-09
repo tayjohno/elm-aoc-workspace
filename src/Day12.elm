@@ -211,29 +211,91 @@ Every ten steps of simulation for 100 steps produces:
 What is the total energy in the system after simulating the moons given in
 your scan for 1000 steps?
 
+
+--- Part Two ---
+
+All this drifting around in space makes you wonder about the nature of the
+universe. Does history really repeat itself? You're curious whether the
+moons will ever return to a previous state.
+
+Determine the number of steps that must occur before all of the moons'
+positions and velocities exactly match a previous point in time.
+
+For example, the first example above takes 2772 steps before they exactly
+match a previous point in time; it eventually returns to the initial
+state:
+
+  After 0 steps:
+  pos=<x= -1, y=  0, z=  2>, vel=<x=  0, y=  0, z=  0>
+  pos=<x=  2, y=-10, z= -7>, vel=<x=  0, y=  0, z=  0>
+  pos=<x=  4, y= -8, z=  8>, vel=<x=  0, y=  0, z=  0>
+  pos=<x=  3, y=  5, z= -1>, vel=<x=  0, y=  0, z=  0>
+
+  After 2770 steps:
+  pos=<x=  2, y= -1, z=  1>, vel=<x= -3, y=  2, z=  2>
+  pos=<x=  3, y= -7, z= -4>, vel=<x=  2, y= -5, z= -6>
+  pos=<x=  1, y= -7, z=  5>, vel=<x=  0, y= -3, z=  6>
+  pos=<x=  2, y=  2, z=  0>, vel=<x=  1, y=  6, z= -2>
+
+  After 2771 steps:
+  pos=<x= -1, y=  0, z=  2>, vel=<x= -3, y=  1, z=  1>
+  pos=<x=  2, y=-10, z= -7>, vel=<x= -1, y= -3, z= -3>
+  pos=<x=  4, y= -8, z=  8>, vel=<x=  3, y= -1, z=  3>
+  pos=<x=  3, y=  5, z= -1>, vel=<x=  1, y=  3, z= -1>
+
+  After 2772 steps:
+  pos=<x= -1, y=  0, z=  2>, vel=<x=  0, y=  0, z=  0>
+  pos=<x=  2, y=-10, z= -7>, vel=<x=  0, y=  0, z=  0>
+  pos=<x=  4, y= -8, z=  8>, vel=<x=  0, y=  0, z=  0>
+  pos=<x=  3, y=  5, z= -1>, vel=<x=  0, y=  0, z=  0>
+
+Of course, the universe might last for a very long time before repeating.
+Here's a copy of the second example from above:
+
+  <x=-8, y=-10, z=0>
+  <x=5, y=5, z=10>
+  <x=2, y=-7, z=3>
+  <x=9, y=-8, z=-3>
+
+This set of initial positions takes 4,686,774,924 steps before it repeats
+a previous state! Clearly, you might need to find a more efficient way to
+simulate the universe.
+
+How many steps does it take to reach the first state that exactly matches
+a previous state?
+
+
 --}
 
 import Answer exposing (Answer(..))
+import Arithmetic exposing (lcm)
+import Set exposing (Set)
+import String.Interpolate as String
 
 
 type alias Moon =
-    { position : { x : Int, y : Int, z : Int }
-    , velocity : { x : Int, y : Int, z : Int }
-    }
+    ( ( Int, Int, Int ), ( Int, Int, Int ) )
 
 
 newMoon : ( Int, Int, Int ) -> Moon
-newMoon ( x, y, z ) =
-    { position = { x = x, y = y, z = z }, velocity = { x = 0, y = 0, z = 0 } }
+newMoon position =
+    ( position, ( 0, 0, 0 ) )
 
 
 input : List Moon
 input =
+    {- real input -}
     [ ( -16, 15, -9 )
     , ( -14, 5, 4 )
     , ( 2, 0, 6 )
     , ( -3, 18, 9 )
     ]
+        {- sample input -}
+        -- [ ( -1, 0, 2 )
+        -- , ( 2, -10, -7 )
+        -- , ( 4, -8, 8 )
+        -- , ( 3, 5, -1 )
+        -- ]
         |> List.map newMoon
 
 
@@ -247,7 +309,64 @@ partOne _ =
 
 partTwo : () -> Answer String
 partTwo _ =
-    Unsolved
+    input
+        |> partTwoHelper
+        |> Answer.fromInt
+
+
+partTwoHelper : List Moon -> Int
+partTwoHelper moonList =
+    [ moonList |> List.map (\( ( x, _, _ ), ( dx, _, _ ) ) -> ( x, dx ))
+    , moonList |> List.map (\( ( _, y, _ ), ( _, dy, _ ) ) -> ( y, dy ))
+    , moonList |> List.map (\( ( _, _, z ), ( _, _, dz ) ) -> ( z, dz ))
+    ]
+        |> List.map loopLength
+        |> List.foldl lcm 1
+
+
+loopLength : List ( Int, Int ) -> Int
+loopLength dimensionalMoonList =
+    dimensionalMoonList
+        |> updateDimensionVelocity
+        |> loopLengthHelper dimensionalMoonList 1
+
+
+loopLengthHelper : List ( Int, Int ) -> Int -> List ( Int, Int ) -> Int
+loopLengthHelper startingState iterations currentState =
+    if startingState == currentState then
+        iterations
+
+    else
+        loopLengthHelper startingState
+            (iterations + 1)
+            (currentState |> updateDimensionVelocity)
+
+
+updateDimensionVelocity : List ( Int, Int ) -> List ( Int, Int )
+updateDimensionVelocity moons =
+    moons
+        -- Update velocity
+        |> List.map
+            (\moon ->
+                List.foldl
+                    (\( otherMoonPosition, _ ) ( moonPosition, moonVelocity ) ->
+                        if otherMoonPosition == moonPosition then
+                            ( moonPosition, moonVelocity )
+
+                        else if otherMoonPosition > moonPosition then
+                            ( moonPosition, moonVelocity + 1 )
+
+                        else
+                            ( moonPosition, moonVelocity - 1 )
+                    )
+                    moon
+                    moons
+            )
+        -- Update position
+        |> List.map
+            (\( position, velocity ) ->
+                ( position + velocity, velocity )
+            )
 
 
 simulate : Int -> List Moon -> List Moon
@@ -269,24 +388,20 @@ updateVelocities moonList =
 updateVelocity : List Moon -> Moon -> Moon
 updateVelocity moonList moon =
     List.foldl
-        (\otherMoon updatedMoon ->
+        (\( ( otherPosX, otherPosY, otherPosZ ), _ ) ( ( moonPosX, moonPosY, moonPosZ ), ( moonVelX, moonVelY, moonVelZ ) ) ->
             let
                 dx =
-                    compare otherMoon.position.x moon.position.x
+                    compare otherPosX moonPosX
 
                 dy =
-                    compare otherMoon.position.y moon.position.y
+                    compare otherPosY moonPosY
 
                 dz =
-                    compare otherMoon.position.z moon.position.z
+                    compare otherPosZ moonPosZ
             in
-            { updatedMoon
-                | velocity =
-                    { x = updatedMoon.velocity.x + dx
-                    , y = updatedMoon.velocity.y + dy
-                    , z = updatedMoon.velocity.z + dz
-                    }
-            }
+            ( ( moonPosX, moonPosY, moonPosZ )
+            , ( moonVelX + dx, moonVelY + dy, moonVelZ + dz )
+            )
         )
         moon
         moonList
@@ -311,25 +426,21 @@ updatePositions moonList =
 
 
 updatePosition : Moon -> Moon
-updatePosition moon =
-    { moon
-        | position =
-            { x = moon.position.x + moon.velocity.x
-            , y = moon.position.y + moon.velocity.y
-            , z = moon.position.z + moon.velocity.z
-            }
-    }
+updatePosition ( ( x, y, z ), ( dx, dy, dz ) ) =
+    ( ( x + dx, y + dy, z + dz )
+    , ( dx, dy, dz )
+    )
 
 
 {-| either the Kinetic energy or the Potential engergy
 -}
-specificEnergy : { x : Int, y : Int, z : Int } -> Int
-specificEnergy { x, y, z } =
+specificEnergy : ( Int, Int, Int ) -> Int
+specificEnergy ( x, y, z ) =
     [ x, y, z ]
         |> List.map abs
         |> List.sum
 
 
 totalEnergy : Moon -> Int
-totalEnergy { position, velocity } =
+totalEnergy ( position, velocity ) =
     specificEnergy position * specificEnergy velocity

@@ -19,7 +19,8 @@
             "elm-community/maybe-extra": "5.0.0",
             "elm-community/string-extra": "4.0.1",
             "elm-explorations/benchmark": "1.0.1",
-            "lukewestby/elm-string-interpolate": "1.0.4"
+            "lukewestby/elm-string-interpolate": "1.0.4",
+            "lynn/elm-arithmetic": "3.0.0"
         },
         "indirect": {
             "BrianHicks/elm-trend": "2.1.2",

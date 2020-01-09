@@ -87,6 +87,6 @@ suite =
             ]
         , describe "Day12"
             [ test_answer "partOne" "10664" Day12.partOne
-            , test_answer "partTwo" "" Day12.partTwo
+            , test_answer "partTwo" "303459551979256" Day12.partTwo
             ]
         ]
