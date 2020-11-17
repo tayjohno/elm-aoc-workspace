@@ -1,4 +1,4 @@
-module Coordinate exposing (Coordinate, distance, down, eightNeighbors, fourNeighbors, heading, left, right, up)
+module Coordinate exposing (Coordinate, Direction(..), distance, down, eightNeighbors, fourNeighbors, heading, left, move, right, up)
 
 {-| ( x, y )
 -}
@@ -6,6 +6,29 @@ module Coordinate exposing (Coordinate, distance, down, eightNeighbors, fourNeig
 
 type alias Coordinate =
     ( Int, Int )
+
+
+type Direction
+    = Up
+    | Down
+    | Left
+    | Right
+
+
+move : Direction -> Coordinate -> Coordinate
+move direction =
+    case direction of
+        Up ->
+            up
+
+        Down ->
+            down
+
+        Left ->
+            left
+
+        Right ->
+            right
 
 
 up ( x, y ) =

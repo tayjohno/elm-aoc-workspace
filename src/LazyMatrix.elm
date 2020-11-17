@@ -6,6 +6,7 @@ module LazyMatrix exposing (LazyMatrix, get, new, set, size, toMatrix)
 
 import Coordinate exposing (Coordinate)
 import Dict exposing (Dict)
+import Dict.Extra as Dict
 import Matrix exposing (Matrix)
 
 
@@ -45,11 +46,15 @@ toMatrix aLazyMatrix =
                 |> List.map Tuple.second
                 |> List.maximum
                 |> Maybe.withDefault 0
+
+        data =
+            aLazyMatrix.data
+                |> Dict.mapKeys (\( x, y ) -> ( x - xMin, y - yMin ))
     in
     Dict.foldl
         (\key val matrix -> Matrix.set key val matrix)
         (Matrix.empty ( xMax - xMin + 1, yMax - yMin + 1 ) aLazyMatrix.default)
-        aLazyMatrix.data
+        data
 
 
 new : a -> LazyMatrix a
