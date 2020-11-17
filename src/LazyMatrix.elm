@@ -1,4 +1,4 @@
-module LazyMatrix exposing (LazyMatrix, get, new, set, size, toMatrix)
+module LazyMatrix exposing (LazyMatrix, contains, find, get, new, set, size, toMatrix)
 
 {- LazyMatrix uses a dictionary behind the scenes and assumes that all
    values are still default until
@@ -86,3 +86,16 @@ set coordinate value lazyMatrix =
 size : LazyMatrix a -> Int
 size lazyMatrix =
     lazyMatrix.data |> Dict.size
+
+
+contains : (a -> Bool) -> LazyMatrix a -> Bool
+contains aMatcher aLazyMatrix =
+    aLazyMatrix.data
+        |> Dict.any (\_ -> aMatcher)
+
+
+find : (a -> Bool) -> LazyMatrix a -> Maybe Coordinate
+find aMatcher aLazyMatrix =
+    aLazyMatrix.data
+        |> Dict.find (\_ -> aMatcher)
+        |> Maybe.map Tuple.first

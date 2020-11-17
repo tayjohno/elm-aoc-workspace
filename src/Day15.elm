@@ -185,9 +185,14 @@ import LazyMatrix exposing (LazyMatrix)
 import Matrix
 
 
+type SearchState
+    = Found
+    | Searching State
+
+
 type alias State =
     { robots : List Robot
-    , knownWorld : LazyMatrix Tile
+    , knownWorld : KnownWorld
     }
 
 
@@ -197,6 +202,10 @@ type alias Robot =
     }
 
 
+type alias KnownWorld =
+    LazyMatrix Tile
+
+
 type Tile
     = Unknown
     | Wall
@@ -204,42 +213,52 @@ type Tile
     | Oxygen
 
 
-type Exit
-    = Found
-
-
-newState : State
-newState =
+init : State
+init =
     { robots = [ { brains = input, position = ( 0, 0 ) } ]
     , knownWorld = LazyMatrix.new Unknown |> LazyMatrix.set ( 0, 0 ) Hall
     }
 
 
+{-| The basic implementation for part 1, keeps track of the search depth and the
+locations of the robots searching as a depth-first search is performed.
+-}
+distanceToOxygen : Int -> State -> Int
+distanceToOxygen depth state =
+    case state |> searchDeeper of
+        Found ->
+            depth
+
+        Searching updatedState ->
+            distanceToOxygen (depth + 1) updatedState
+
+
 {-| Takes in a state, extracts all robots, moves robots in every valid
 direction (depth first search), returns the new state.
 -}
-explore : State -> Result Exit State
-explore state =
-    List.foldl searchWithRobot (Ok { state | robots = [] }) state.robots
+searchDeeper : State -> SearchState
+searchDeeper state =
+    List.foldl searchAllDirectionsWithRobot (Searching { state | robots = [] }) state.robots
 
 
 {-| given a single robot and the current state, send that robot in every
 direction that hasn't been explored.
 -}
-searchWithRobot : Robot -> Result Exit State -> Result Exit State
-searchWithRobot robot resultState =
-    List.foldl (moveRobot robot) resultState [ Up, Left, Right, Down ]
+searchAllDirectionsWithRobot : Robot -> SearchState -> SearchState
+searchAllDirectionsWithRobot robot resultState =
+    List.foldl (searchWithRobot robot) resultState [ Up, Left, Right, Down ]
 
 
-{-| attempt to move a robot in a particular direction.
+{-| attempt to move a robot in a particular direction and see if the oxygen is
+found.
 -}
-moveRobot : Robot -> Direction -> Result Exit State -> Result Exit State
-moveRobot robot direction resultState =
+searchWithRobot : Robot -> Direction -> SearchState -> SearchState
+searchWithRobot robot direction resultState =
     case resultState of
-        Err a ->
-            Err a
+        Found ->
+            Found
 
-        Ok state ->
+        Searching state ->
             let
                 newCoordinate =
                     Coordinate.move direction robot.position
@@ -261,7 +280,7 @@ moveRobot robot direction resultState =
                 in
                 case performedBrains.outputs of
                     [ 0 ] ->
-                        Ok
+                        Searching
                             { state
                                 | knownWorld =
                                     state.knownWorld
@@ -269,7 +288,7 @@ moveRobot robot direction resultState =
                             }
 
                     [ 1 ] ->
-                        Ok
+                        Searching
                             { state
                                 | knownWorld =
                                     state.knownWorld
@@ -282,11 +301,147 @@ moveRobot robot direction resultState =
                             }
 
                     [ 2 ] ->
-                        Err Found
+                        Found
 
                     a ->
                         Debug.log "unexpected" a
                             |> Debug.todo "oops"
+
+
+{-| Looks everywhere until there's nothing left to be explored, then returns the map
+-}
+exploreEverywhere : State -> KnownWorld
+exploreEverywhere state =
+    -- let
+    --     _ =
+    --         state.knownWorld |> printKnownWorld
+    -- in
+    case state.robots of
+        [] ->
+            state.knownWorld
+
+        _ ->
+            List.foldl exploreAllDirectionsWithRobot { state | robots = [] } state.robots
+                |> exploreEverywhere
+
+
+exploreAllDirectionsWithRobot : Robot -> State -> State
+exploreAllDirectionsWithRobot robot state =
+    List.foldl (exploreWithRobot robot) state [ Up, Left, Right, Down ]
+
+
+exploreWithRobot : Robot -> Direction -> State -> State
+exploreWithRobot robot direction state =
+    let
+        newCoordinate =
+            Coordinate.move direction robot.position
+
+        isExplored =
+            state.knownWorld
+                |> LazyMatrix.get newCoordinate
+                |> (/=) Unknown
+    in
+    if isExplored then
+        -- Don't re-explore a location we've already been!
+        state
+
+    else
+        let
+            performedBrains =
+                robot.brains
+                    |> Intcode.setInputs [ direction |> toInstruction ]
+                    |> Intcode.executeProgram
+        in
+        case performedBrains.outputs of
+            [ 0 ] ->
+                { state
+                    | knownWorld =
+                        state.knownWorld
+                            |> LazyMatrix.set newCoordinate Wall
+                }
+
+            [ 1 ] ->
+                { state
+                    | knownWorld =
+                        state.knownWorld
+                            |> LazyMatrix.set newCoordinate Hall
+                    , robots =
+                        { position = newCoordinate
+                        , brains = { performedBrains | outputs = [] }
+                        }
+                            :: state.robots
+                }
+
+            [ 2 ] ->
+                { state
+                    | knownWorld =
+                        state.knownWorld
+                            |> LazyMatrix.set newCoordinate Oxygen
+                    , robots =
+                        { position = newCoordinate
+                        , brains = { performedBrains | outputs = [] }
+                        }
+                            :: state.robots
+                }
+
+            a ->
+                Debug.log "unexpected" a
+                    |> Debug.todo "oops"
+
+
+type alias OxygenState =
+    { recentExpansions : List Coordinate
+    , knownWorld : KnownWorld
+    , timeElapsed : Int
+    }
+
+
+oxygenCapacityReached : OxygenState -> Bool
+oxygenCapacityReached oxygenState =
+    oxygenState.knownWorld
+        |> LazyMatrix.contains (\tile -> tile == Hall)
+        |> not
+
+
+timeToFullOxygen : OxygenState -> Int
+timeToFullOxygen oxygenState =
+    -- let
+    --     _ =
+    --         oxygenState.knownWorld |> printKnownWorld
+    -- in
+    if oxygenState |> oxygenCapacityReached then
+        oxygenState.timeElapsed
+
+    else
+        let
+            newMinute =
+                { oxygenState
+                    | recentExpansions = []
+                    , timeElapsed = oxygenState.timeElapsed + 1
+                }
+        in
+        List.foldl expandOxygenOutward newMinute oxygenState.recentExpansions
+            |> timeToFullOxygen
+
+
+expandOxygenOutward : Coordinate -> OxygenState -> OxygenState
+expandOxygenOutward coordinate oxygenState =
+    coordinate
+        |> Coordinate.fourNeighbors
+        |> List.foldl expandOxygenTo oxygenState
+
+
+expandOxygenTo : Coordinate -> OxygenState -> OxygenState
+expandOxygenTo coordinate oxygenState =
+    case oxygenState.knownWorld |> LazyMatrix.get coordinate of
+        Hall ->
+            { oxygenState
+                | recentExpansions = coordinate :: oxygenState.recentExpansions
+                , knownWorld = oxygenState.knownWorld |> LazyMatrix.set coordinate Oxygen
+            }
+
+        _ ->
+            oxygenState
 
 
 toInstruction : Direction -> Int
@@ -305,45 +460,60 @@ toInstruction direction =
             4
 
 
-prettyPrint : State -> State
-prettyPrint state =
-    state.knownWorld
+partOne : () -> Answer String
+partOne _ =
+    init
+        |> distanceToOxygen 1
+        |> Answer.fromInt
+
+
+partTwo : () -> Answer String
+partTwo _ =
+    let
+        knownWorld =
+            init
+                |> exploreEverywhere
+
+        oxygenStart =
+            case knownWorld |> LazyMatrix.find (\tile -> tile == Oxygen) of
+                Nothing ->
+                    Debug.todo "No oxygen in the world?"
+
+                Just coord ->
+                    coord |> List.singleton
+    in
+    timeToFullOxygen (OxygenState oxygenStart knownWorld 0)
+        |> Answer.fromInt
+
+
+
+-- DEBUGGING/HELPERS
+
+
+printKnownWorld : KnownWorld -> KnownWorld
+printKnownWorld knownWorld =
+    let
+        _ =
+            Debug.log "" ""
+
+        _ =
+            Debug.log "" ""
+    in
+    knownWorld
         |> LazyMatrix.toMatrix
         |> Matrix.customPrint
             (\tile ->
                 case tile of
+                    Unknown ->
+                        ' '
+
                     Wall ->
                         '#'
 
                     Hall ->
                         '.'
 
-                    Unknown ->
-                        ' '
-
                     Oxygen ->
                         'O'
             )
-        |> always state
-
-
-partOne : () -> Answer String
-partOne _ =
-    newState
-        |> search 1
-        |> Answer.fromInt
-
-
-search : Int -> State -> Int
-search depth state =
-    case state |> explore of
-        Err Found ->
-            depth
-
-        Ok updatedState ->
-            search (depth + 1) updatedState
-
-
-partTwo : () -> Answer String
-partTwo _ =
-    Unsolved
+        |> always knownWorld

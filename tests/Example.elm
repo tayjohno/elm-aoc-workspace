@@ -99,6 +99,6 @@ suite =
             ]
         , describe "Day15"
             [ test_answer "partOne" "270" Day15.partOne
-            , test_answer "partTwo" "" Day15.partTwo
+            , test_answer "partTwo" "364" Day15.partTwo
             ]
         ]
