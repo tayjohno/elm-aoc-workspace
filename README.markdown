@@ -13,6 +13,7 @@ the answer isn't being calculated from scratch each time.
 
 To see the output, run the elm make command below and then open the `index.html`.
 
-```
-elm make src/Answers.elm -- --output=elm.js
+```bash
+yarn make
+# This is the same as `elm make src/Answers.elm --output=elm.js`
 ```
