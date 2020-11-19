@@ -9,6 +9,19 @@ you have a solution, or `Unsolved` if you haven't figured it out yet. Also, if y
 that just takes too long to calculate, feel free to mark it as `Faked "abc"` so that you know that
 the answer isn't being calculated from scratch each time.
 
+```elm
+{-| Calculate the answer (integer) and convert it to an Answer type (Solved String).
+partOne =
+    input
+        |> calculateTheAnswer
+        |> Answer.fromInt
+
+{-| faked with the solution so it doesn't slow down the website or tests -}
+partTwo =
+    "12345"
+        |> Faked
+```
+
 ### Running
 
 To see the output, run the elm make command below and then open the `index.html`.
