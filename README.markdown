@@ -22,11 +22,20 @@ partTwo =
         |> Faked
 ```
 
+### Testing
+
+Once you've confirmed the answer to a problem, you can add a test for that answer in the `tests/Example.elm` file. Then if you change anything you can verify that it still returns the right answer by running the tests.
+
+```bash
+# This is the same as `yarn elm-test`
+yarn test
+```
+
 ### Running
 
 To see the output, run the elm make command below and then open the `index.html`.
 
 ```bash
+# This is the same as `yarn elm make src/Answers.elm --output=elm.js`
 yarn make
-# This is the same as `elm make src/Answers.elm --output=elm.js`
 ```
