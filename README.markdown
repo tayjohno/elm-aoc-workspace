@@ -39,3 +39,5 @@ To see the output, run the elm make command below and then open the `index.html`
 # This is the same as `yarn elm make src/Answers.elm --output=elm.js`
 yarn make
 ```
+
+Even faster, you can run `yarn launch` which will open `index.html` _for you_ after it has finished building.
