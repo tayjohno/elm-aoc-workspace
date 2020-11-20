@@ -4,6 +4,8 @@
     "elm-test": "^0.19.1-revision2"
   },
   "scripts": {
-    "make": "elm make src/Answers.elm --output=elm.js"
+    "make": "elm make src/Answers.elm --output=elm.js",
+    "launch": "elm make src/Answers.elm --output=elm.js; open index.html",
+    "test": "elm-test"
   }
 }
