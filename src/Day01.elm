@@ -1,6 +1,7 @@
 module Day01 exposing (partOne, partTwo)
 
 import Answer exposing (..)
+import List.Extra as List
 import List.Mine as List
 
 
@@ -8,8 +9,7 @@ partOne : () -> Answer String
 partOne =
     \_ ->
         List.combinations 2 input
-            |> List.filter (\pair -> (pair |> List.sum) == 2020)
-            |> List.head
+            |> List.find (List.sum >> (==) 2020)
             |> Maybe.map List.product
             |> fromMaybeInt
 
@@ -18,8 +18,7 @@ partTwo : () -> Answer String
 partTwo =
     \_ ->
         List.combinations 3 input
-            |> List.filter (\triplet -> (triplet |> List.sum) == 2020)
-            |> List.head
+            |> List.find (List.sum >> (==) 2020)
             |> Maybe.map List.product
             |> fromMaybeInt
 
