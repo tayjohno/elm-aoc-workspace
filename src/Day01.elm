@@ -8,7 +8,8 @@ import List.Mine as List
 partOne : () -> Answer String
 partOne =
     \_ ->
-        List.combinations 2 input
+        input
+            |> List.combinations 2
             |> List.find (List.sum >> (==) 2020)
             |> Maybe.map List.product
             |> fromMaybeInt
@@ -17,7 +18,8 @@ partOne =
 partTwo : () -> Answer String
 partTwo =
     \_ ->
-        List.combinations 3 input
+        input
+            |> List.combinations 3
             |> List.find (List.sum >> (==) 2020)
             |> Maybe.map List.product
             |> fromMaybeInt
